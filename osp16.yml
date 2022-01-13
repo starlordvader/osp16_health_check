@@ -40,16 +40,6 @@
     ignore_errors: yes
     register: failed_units
   - debug: var=failed_units.stdout_lines
-  - name: check any podman containers exited with rc 1
-    shell: sudo podman ps -a 'exited=1' --all
-    ignore_errors: yes
-    register: rc1_containers
-  - debug: var=rc1_containers.stdout_lines
-  - name: check any podman containers in dead or restarting state
-    shell: sudo podman ps -f 'status=exited'
-    ignore_errors: yes
-    register: dead_containers
-  - debug: var=dead_containers.stdout_lines
   - name: check rabbitmq node health
     shell: cid=` sudo podman ps -f 'name=.*rabbitmq.*' -q`; sudo podman exec "$cid" rabbitmqctl node_health_check
     ignore_errors: yes
@@ -76,11 +66,6 @@
     ignore_errors: yes
     register: rc1_containers
   - debug: var=rc1_containers.stdout_lines
-  - name: check any podman containers in dead or restarting state
-    shell: podman ps -a 'status=dead' -f 'status=restarting'
-    ignore_errors: yes
-    register: dead_containers
-  - debug: var=dead_containers.stdout_lines
   - name: check memory on computes
     shell: hostnamectl ; free -mh
     ignore_errors: yes
