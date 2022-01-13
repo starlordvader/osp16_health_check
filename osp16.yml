@@ -1,3 +1,4 @@
+#This will run only on the first controller i.e controller-0
 - hosts: controllers[0]
   become: true
   gather_facts: no
@@ -29,7 +30,7 @@
   - debug: var=ceph_df.stdout_lines
 
 
-
+#This will be running on all controllers
 - hosts: controllers
   become: true
   gather_facts: no
@@ -60,6 +61,7 @@
     register: cluster_check
   - debug: var=cluster_check.stdout_lines
  
+#This will be running on all computes
 - hosts: computes
   become: true
   gather_facts: no
