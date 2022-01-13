@@ -95,7 +95,7 @@
     register: instances
   - debug: var=instances.stdout_lines
 
-  
+#This is considered as the director server and it is assumed that the source files like stackrc and overcloudrc are part of the /home/stack/ director   
 - hosts: localhost
   gather_facts: no
   tasks:
