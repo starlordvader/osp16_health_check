@@ -1,0 +1,141 @@
+- hosts: controllers[0]
+  become: true
+  gather_facts: no
+  tasks:
+  - name: check pacemaker status
+    shell: pcs status
+    ignore_errors: yes
+    register: pcs_status
+  - debug: var=pcs_status.stdout_lines
+  - name: check rabbitmq cluster status
+    shell: sudo podman exec rabbitmq-bundle-podman-1 rabbitmqctl cluster_status
+    ignore_errors: yes
+    register: rabbit_status
+  - debug: var=rabbit_status.stdout_lines
+  - name: check galera cluster status
+    shell: podman exec galera-bundle-podman-1 clustercheck
+    ignore_errors: yes
+    register: galera_status
+  - debug: var=galera_status.stdout_lines
+  - name: check ceph cluster health
+    shell: sudo podman exec ceph-mon-controller-1 ceph -s
+    ignore_errors: yes
+    register: ceph_health
+  - debug: var=ceph_health.stdout_lines
+  - name: check ceph cluster space
+    shell: sudo podman exec ceph-mon-controller-1 ceph df
+    ignore_errors: yes
+    register: ceph_df
+  - debug: var=ceph_df.stdout_lines
+
+
+
+- hosts: controllers
+  become: true
+  gather_facts: no
+  tasks:
+  - name: check any systemd services are in failed state
+    shell: systemctl list-units --state=failed 'openstack*' 'neutron*' 'httpd' 'podman' 'ceph*'
+    ignore_errors: yes
+    register: failed_units
+  - debug: var=failed_units.stdout_lines
+  - name: check any podman containers exited with rc 1
+    shell: sudo podman ps -a 'exited=1' --all
+    ignore_errors: yes
+    register: rc1_containers
+  - debug: var=rc1_containers.stdout_lines
+  - name: check any podman containers in dead or restarting state
+    shell: sudo podman ps -f 'status=exited'
+    ignore_errors: yes
+    register: dead_containers
+  - debug: var=dead_containers.stdout_lines
+  - name: check rabbitmq node health
+    shell: cid=` sudo podman ps -f 'name=.*rabbitmq.*' -q`; sudo podman exec "$cid" rabbitmqctl node_health_check
+    ignore_errors: yes
+    register: rabbit_node_health
+  - debug: var=rabbit_node_health.stdout_lines
+  - name: check galera cluster sync
+    shell: sudo podman exec clustercheck clustercheck
+    ignore_errors: yes
+    register: cluster_check
+  - debug: var=cluster_check.stdout_lines
+ 
+- hosts: computes
+  become: true
+  gather_facts: no
+  tasks:
+  - name: check any systemd services are in failed state
+    shell: systemctl list-units --state=failed 'openstack*' 'neutron*' 'httpd' 'podman' 'ceph*' '*vswitch*'
+    ignore_errors: yes
+    register: failed_units
+  - debug: var=failed_units.stdout_lines
+  - name: check any podman containers exited with rc 1
+    shell: sudo podman ps -f 'exited=1' --all
+    ignore_errors: yes
+    register: rc1_containers
+  - debug: var=rc1_containers.stdout_lines
+  - name: check any podman containers in dead or restarting state
+    shell: podman ps -a 'status=dead' -f 'status=restarting'
+    ignore_errors: yes
+    register: dead_containers
+  - debug: var=dead_containers.stdout_lines
+  - name: check memory on computes
+    shell: hostnamectl ; free -mh
+    ignore_errors: yes
+    register: free_memory
+  - debug: var=free_memory.stdout_lines
+  - name: check disk on computes
+    shell: hostnamectl ; df -h
+    ignore_errors: yes
+    register: disk_free
+  - debug: var=disk_free.stdout_lines
+  - name: check instances on computes
+    shell: hostnamectl ; sudo virsh list --all
+    ignore_errors: yes
+    register: instances
+  - debug: var=instances.stdout_lines
+
+  
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: check network agent health
+    shell: source ~/overcloudrc ; openstack network agent list 
+    ignore_errors: yes
+    register: network_agent_health
+  - debug: var=network_agent_health.stdout_lines
+  - name: check compute agent health
+    shell: source ~/overcloudrc ; openstack compute service list 
+    ignore_errors: yes
+    register: compute_agent_health
+  - debug: var=compute_agent_health.stdout_lines
+  - name: check volume service health
+    shell: source ~/overcloudrc ; openstack volume service list 
+    ignore_errors: yes
+    register: volume_service_health
+  - debug: var=volume_service_health.stdout_lines
+  - name: check openstack server list
+    shell: source ~/overcloudrc ; openstack server list --all
+    ignore_errors: yes
+    register: openstack_server_list
+  - debug: var=openstack_server_list.stdout_lines
+  - name: check openstack endpoint list
+    shell: source ~/overcloudrc ; openstack endpoint list
+    ignore_errors: yes
+    register: openstack_endpoint_list
+  - debug: var=openstack_endpoint_list.stdout_lines
+  - name: check openstack baremetal node list
+    shell: source ~/stackrc ; openstack baremetal node list
+    ignore_errors: yes
+    register: openstack_baremetal_list
+  - debug: var=openstack_baremetal_list.stdout_lines
+  - name: check openstack image list list
+    shell: source ~/stackrc ; openstack image list
+    ignore_errors: yes
+    register: openstack_image_list
+  - debug: var=openstack_image_list.stdout_lines
+  - name: check undercloud memory
+    shell: free -mh
+    ignore_errors: yes
+    register: check_mem_list
+  - debug: var=check_mem_list.stdout_lines 
