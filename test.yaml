@@ -1,0 +1,8 @@
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: check DIRECTOR memory
+    shell: free -mh
+    ignore_errors: yes
+    register: check_mem_list
+  - debug: var=check_mem_list.stdout_lines
